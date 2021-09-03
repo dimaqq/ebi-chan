@@ -18,11 +18,18 @@ async def debug(request):
 
 @routes.get("/backoff/{name:.+}")
 async def backoff(request):
+    now = time.monotonic()
     name = request.match_info["name"]
-    STATE.get().names.setdefault(name, Record.new())
+
+    STATE.get().names.setdefault(name, Record.new(now))
+
     record = STATE.get().names[name]
-    record.backoff *= 2
-    record.timestamp = time.monotonic()
+    if now >= record.expiration:
+        record.backoff = 0.1
+    else:
+        record.backoff *= 2
+    record.timestamp = now
+
     await asyncio.sleep(record.backoff)
     raise web.HTTPNoContent()
 
@@ -42,11 +49,11 @@ class Record:
 
     @property
     def expiration(self):
-        return self.timestamp + self.backoff
+        return self.timestamp + self.backoff * 2
 
     @classmethod
-    def new(cls):
-        return cls(0.05, time.monotonic())
+    def new(cls, timestamp):
+        return cls(0, timestamp)
 
 
 @dataclass

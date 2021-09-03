@@ -11,6 +11,11 @@ def random_name():
 
 
 @pytest.fixture
+def another_name():
+    return secrets.token_hex(nbytes=4)
+
+
+@pytest.fixture
 def server():
     return os.environ.get("EBI_HOST", "localhost")
 
